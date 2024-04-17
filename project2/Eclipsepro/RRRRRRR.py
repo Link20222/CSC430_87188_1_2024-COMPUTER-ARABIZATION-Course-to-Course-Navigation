@@ -1,19 +1,19 @@
 import tkinter as tk
 from tkinter import font, filedialog, messagebox
 from PIL import Image, ImageTk
-import docx
-import pyautogui
-import keyboard
-import pygame
-from enum import Enum  # قم بإضافة هذا الاستيراد
+import docx, keyboard
+from enum import Enum
+import pygame, pyttsx3, ctypes
+
 
 class configType(Enum):
     HotKey = 1
     ReMap = 2
 
+
 class keyboardController:
     shortcut = []
-    
+
     arabic_to_english = {
         'a': 'ش',
         'b': 'لا',
@@ -93,11 +93,6 @@ class keyboardController:
 }
 
 
-
-
-
-
-
     def add_shortcut_action(self, keys, action, type):
         self.shortcut.append((keys, action, type))
 
@@ -114,12 +109,6 @@ class keyboardController:
             elif type == configType.ReMap:
                 keyboard.remap_key(keys, action)
 
-config = keyboardController()
-config.add_shortcut_action('b', lambda: keyboard.write('ال'), configType.HotKey)
-config.add_shortcut_action('shift+b', lambda: keyboard.write('أل'), configType.HotKey)
-config.suppress_shortcut('caps lock')
-config.add_shortcut_action('q+w+e', lambda: print('action'), configType.HotKey)
-config.compile()
 
 def play_audio(file_name):
     audio_folder = "C:\\Users\\d7oom\\Desktop\\Eclipsepro"
@@ -127,11 +116,13 @@ def play_audio(file_name):
     pygame.mixer.init()
     sound = pygame.mixer.Sound(file_path)
     sound.play()
-    pygame.time.delay(int(sound.get_length() * 1000))
-#---------------------------------------------
+
+
 def change_font():
-    selected_font = font.Font(family=font_family.get(), size=font_size.get(), weight=font_weight.get(), slant=font_slant.get())
+    selected_font = font.Font(family=font_family.get(), size=font_size.get(), weight=font_weight.get(),
+                              slant=font_slant.get())
     text_editor.config(font=selected_font)
+
 
 def open_image():
     file_path = filedialog.askopenfilename()
@@ -142,8 +133,10 @@ def open_image():
         image_label.config(image=photo)
         image_label.image = photo
 
+
 def save_file():
-    file_path = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text files", "*.txt"), ("Word files", "*.doc")])
+    file_path = filedialog.asksaveasfilename(defaultextension=".txt",
+                                             filetypes=[("Text files", "*.txt"), ("Word files", "*.doc")])
     if file_path:
         if file_path.endswith(".txt"):
             with open(file_path, "w") as f:
@@ -155,7 +148,19 @@ def save_file():
             doc.add_paragraph(text)
             doc.save(file_path)
         messagebox.showinfo("تم الحفظ", "تم حفظ الملف بنجاح!")
-#--------------------------------------------------
+
+
+
+
+
+config = keyboardController()
+config.add_shortcut_action('b', lambda: keyboard.write('ال'), configType.HotKey)
+config.add_shortcut_action('shift+b', lambda: keyboard.write('أل'), configType.HotKey)
+config.suppress_shortcut('caps lock')
+config.add_shortcut_action('q+w+e', lambda: print('action'), configType.HotKey)
+config.compile()
+
+
 # إنشاء نافذة البرنامج
 root = tk.Tk()
 root.title("محرر نصوص وعرض الصور")
@@ -182,7 +187,7 @@ apply_button = tk.Button(root, text="تطبيق", command=change_font)
 open_image_button = tk.Button(root, text="فتح صورة", command=open_image)
 save_button = tk.Button(root, text="حفظ الملف", command=save_file)
 image_label = tk.Label(root)
-#------------------------------------------
+
 # ترتيب المكونات على النافذة
 text_editor.grid(row=0, column=0, columnspan=5, padx=10, pady=10)
 font_family_label.grid(row=1, column=0, padx=10, pady=5)
@@ -197,45 +202,45 @@ apply_button.grid(row=1, column=8, padx=10, pady=5)
 open_image_button.grid(row=2, column=0, columnspan=2, padx=10, pady=5)
 save_button.grid(row=2, column=2, columnspan=2, padx=10, pady=5)
 image_label.grid(row=3, column=0, columnspan=5, padx=10, pady=10)
-#----------------------------------------
 
-# -----------------------------------------
-# تغيير اللغة
-# إضافة ميزة تغيير اللغة باستخدام الزر F1
-# إضافة ميزة تغيير اللغة باستخدام الزر F1
 
+#----------------------
+engine = pyttsx3.init()
+
+def get_keyboard_layout():
+    user32 = ctypes.cdll.LoadLibrary("user32.dll")
+    language_id = user32.GetKeyboardLayout(0) & 0xFFFF
+    
+    if language_id == 0x0401:  # Arabic
+        return 'Arabic'
+    elif language_id == 0x0409:  # English
+        return 'English'
+    else:
+        return 'Unknown'
 
 def change_language():
-    keyboard.send("shift+Alt")
-    current_layout = keyboard.get_keyboard_layout()
+    current_layout = get_keyboard_layout()
+    
     if current_layout == 'Arabic':
-        play_audio("arabic")
+        if keyboard.is_pressed('F1'):
+            doSome("english")
     elif current_layout == 'English':
-        play_audio("english")
-
-
-
+        if keyboard.is_pressed('F1'):
+            doSome("arabic")
 
 
 # إضافة مفتاح لتغيير اللغة باستخدام الزر F1
-keyboard.add_hotkey("F1", change_language)
-# -----------------------------------------
-def on_caps_lock_press(event):
-    if event.event_type == "down":
-        current_layout = keyboard.get_keyboard_layout()
-        if current_layout == 'Arabic' and keyboard.is_pressed('caps lock'):
-            for char, shifted_char in config.arabic_shifted_letters.items():
-                keyboard.remap_key(char, shifted_char)
-        elif current_layout == 'English':
-            if keyboard.is_pressed('caps lock'):
-                keyboard.press('caps lock')
-                keyboard.release('caps lock')
-            else:
-                for char, shifted_char in config.arabic_shifted_letters.items():
-                    keyboard.remap_key(char, char.upper())
+def doSome(str):
+    play_audio(str)
+    keyboard.send("shift+alt")
 
-# استدعاء الدالة عند الضغط على مفتاح Caps Lock
-keyboard.on_press_key("caps lock", on_caps_lock_press)
-#------------------------------------------
+
+
+
+
+keyboard.add_hotkey("F1", change_language)
+
+
+
 # تشغيل النافذة
 root.mainloop()
